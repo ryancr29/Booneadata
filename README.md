@@ -4,6 +4,6 @@
 
 Rawdata files are included as xlx.s documents, for both laboratory experiments (behavioral response assay as well as the biofiltration assay)
 
-Data analyses were primarily conducted in r.studio and are included as r.markdown files.
+Data analyses were primarily conducted in r.studio and are included as r.markdown (.rmd) files.
 
 Data for supplemental figures is included in a seperate file, along with the associated supplemental figures.
