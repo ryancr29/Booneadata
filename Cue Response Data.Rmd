@@ -1,0 +1,120 @@
+---
+title: "Cue Response Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(kableExtra)
+```
+
+```{r}
+MovementData <- read_csv("Downloads/MovementData.csv")
+
+FeedingData <- read_csv("Downloads/FeedingData.csv")
+```
+
+```{r}
+#Individuals: One Way Anova, Treatment ~ Rate
+
+a <- aov(MovementData$`Distance (cm)` ~ MovementData$Treatment)
+summary(a)
+
+```
+
+```{r}
+#Group/Feeding Activity: One Way Anova, Delta ~ Treatment
+
+a <- aov(FeedingData$Delta ~ FeedingData$Treatment)
+summary(a)
+
+
+```
+
+```{r}
+#Summary Staistics of Feeding Data
+
+sum_table_Delta = FeedingData %>% 
+  group_by(Treatment) %>% 
+    summarize(min(Delta),
+              mean(Delta),
+              sd(Delta),
+              median(Delta),
+              max(Delta))
+
+sum_table_Delta
+
+sum_table_Delta %>% 
+  kable(caption = "Change in Boonea Observed Feeding across Treatments", 
+        col.names = c("Treatment","Min","Mean","SD","Median","Max")) %>%
+  kable_classic_2(full_width = F, position = "center", html_font = "Cambria")
+
+```
+
+
+```{r}
+
+#Boxplot of Feeding Data
+
+b <- ggplot(FeedingData, aes(x = Treatment, y= Delta, fill = Treatment)) +
+  geom_boxplot()+
+  theme_classic()
+
+
+b + scale_fill_manual(values = c("lightsteelblue", "sienna1", "lightgray")) +
+  labs(x= "Treatment", y= "Change in Observed Boonea Feeding ")
+
+
+```
+
+```{r}
+#Movement Summary Statistics Table
+sumTableRate = MovementData %>% 
+  group_by(Treatment) %>% 
+    summarize(min(`Distance (cm)`),
+              mean(`Distance (cm)`),
+              sd(`Distance (cm)`),
+              median(`Distance (cm)`),
+              max(`Distance (cm)`))
+
+sumTableRate
+
+sumTableRate %>% 
+  kable(caption = "Boonea Movement (cm) across Treatment", 
+        col.names = c("Treatment","Min","Mean","SD","Median","Max")) %>%
+  kable_classic_2(full_width = F, position = "center", html_font = "Cambria")
+
+```
+
+
+```{r}
+#MovementBoxplots
+
+c <- ggplot(MovementData, aes(x= Treatment, y= MovementData$`Rate(mm/s)`, fill = Treatment))+
+  geom_boxplot()+
+  theme_classic()
+  
+c + scale_fill_manual(values = c("lightsteelblue", "sienna1", "lightgray")) +
+  labs(title = "Boonea Movement" , x= "Treatment", y= "Rate (mm/s)" )
+
+```
+
+
+
+
+
+```{r}
+#publication figs
+
+
+
+
+
+```
+
+
