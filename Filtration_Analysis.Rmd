@@ -1,0 +1,300 @@
+---
+title: "Filtration Analysis"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+#Load Packages
+```{r packages}
+#Load Libraries
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(dplyr)
+
+```
+
+#Load Data
+```{r loaddata}
+filtdata <- read.csv("booneachla.csv")
+
+crab<-filtdata$olfactory.cue.dosage
+
+names(filtdata)
+```
+
+###Assessment of initial differences
+```{r Oyster Length}
+OysterLength<-aov(Oyster.Length~Delta,data=filtdata)
+summary(OysterLength)
+
+#No Differences in Chla changes by Oyster Size
+```
+
+```{r Pea Crab Presence}
+PeaCrab <- glm(Pea.crab~Delta,data=filtdata,family=binomial)
+summary(PeaCrab) 
+
+#No Differences in Final Chla by Peacrab presence
+```
+
+```{r initial chla conc}
+chla<-aov((Initial..chl.a.)~treatment,data=filtdata)
+summary(chla) 
+
+#No Differences in initial Chl-A across treatments
+```
+
+### How does CHl-A (proxy for filtration) change with crab scent and boonea density
+```{r Two Way Anova Crab Scent Boonea Desnity ChlA}
+a<-aov(propfeeding~crab, as.factor('boonea'),data = filtdata) ##Two-way ANOVA
+summary(a)
+# Cue dosage received played a role in the proportion of boonea feeding??
+```
+
+```{r test of normality analysis of significance}
+shapiro.test((a$resid)) ##  normal
+plot(a) ##homogeneity of varience looks good
+
+
+TukeyHSD(a, as.factor('boonea'), ordered = TRUE)
+	# Significant effect of boonea driven by difference between 20(high) and 5(low) treatments
+```
+
+```{r Boonea density interaction}
+interaction.plot(x.factor = filtdata$boonea, #x-axis variable
+                 trace.factor = filtdata$olfactory.cue.dosage, #variable for lines
+                 response = filtdata$Delta, #y-axis variable
+                 fun = median, #metric to plot
+                 ylab = "Change in Chl-A Concentration",
+                 xlab = "Parasite Load (Boonea Present)",
+                 col = c("cyan4", "blue4"),
+                 main = "Average Change in Chl-A Concentration across Density Treatments",
+                 lty = 1, #line type
+                 lwd = 2, #line width
+                 trace.label = "Cue Concentration")
+### Lower Boonea densities (5-10)
+### crab scent negatively impacts oyster filtration.
+### At high densities, crab scent positively impacts filtration.
+### Crab cues appear to scare oysters and reduce filtration. 
+### Past a certain density, the negative effects of Boonea are probably
+### considerably greater than negative crab cue effects. In this case, crab 
+### cues may supress oyster feeding a bit through fear, but they 
+### simultaneously supress boonea feeding, facillitating oysters. Fucking cool.
+```
+
+```{r Sub boonea density with number feeding porportion feeding}
+
+b<-aov(Delta~crab*feeding,data=filtdata)
+summary(b)
+shapiro.test((b$resid)) ##  Not normal... "feeding" is the issue - count data
+plot(b) # negative binomial glm instead...
+
+```
+
+```{r Negative binomial glm}
+
+c<- glmer.nb(abs(Delta)~crab*feeding,data=mydata)
+summary(c) #crab scent and number of boonea feeding shake out as significant
+shapiro.test((c$resid))
+plot(c)  # it's ok... probably good enough
+1 - pchisq(summary(c)$deviance, summary(c)$df.residual)  ###Goodness of Fit test looks good
+
+```
+
+```{r prop feeding graph }
+d<-aov(feeding~crab*as.factor(boonea),data=filtdata)
+summary(d) #Main effects and interaction significant
+shapiro.test((d$resid)) ##  normal
+
+#Let's check out this interaction...
+interaction.plot(x.factor = filtdata$boonea, #x-axis variable
+                 trace.factor = crab, #variable for lines
+                 response = filtdata$feeding, #y-axis variable
+                 fun = median, #metric to plot
+                 ylab = "Observed Feeding",
+                 xlab = "Parasite Load (Boonea Present)",
+                 main = "Average Boonea Observed Feeding across Density Treatments",
+                 col = c("cyan4", "blue4"),
+                 lty = 1, #line type
+                 lwd = 2, #line width
+                 trace.label = "Crab Cue")
+
+```
+#Graphical Representations of Statistical Distributions
+```{r boxplots}
+
+boxplot(mydata$Delta ~ mydata$crab, 
+        xlab = "Mud Crab Cues", 
+        ylab = "Delta"
+        )
+
+boxplot(mydata$Delta ~ mydata$treatment,
+        col=myColors1,
+        xlab = "Parasite Load and Cue Presence", 
+        ylab = "Delta"
+        )
+
+new_order <- with(mydata, reorder(L, LC, M, MC, H, HC))
+
+
+quantile(mydata$Delta, probs=c(0, 0.25, 0.5, 0.75, 1))
+
+```
+```{r ordered boxplot}
+
+ordered_data<- mydata
+
+ordered_data$treatment <- factor(ordered_data$treatment, 
+                                 c("L", "LC", "M", "MC", "H", "HC"))
+
+boxplot(ordered_data$Delta ~ ordered_data$treatment, 
+        xlab = "Parasite Load (Low to High) and Treatment (Crab, No Crab)", 
+        ylab = "Change in Chl-A (Mg/L/h)",
+        main = "Changes in Chl-A Concentrations Across Treatments"
+        )
+
+```
+```{r boxplots feeding proportion}
+
+r <-boxplot(ordered_data$feeding ~ ordered_data$treatment,
+        main = "Boonea Feeding Activity Across Treatments",
+        ylab = "Boonea Observed Feeding", 
+        xlab = "Parasite Load (Low to High) and Treatment (Crab, No Crab)"
+        )
+
+```
+```{r boonea feeding ggplot}
+
+a <- ggplot(ordered_data, aes(x=treatment, y=feeding, fill =treatment))+
+        geom_boxplot()
+
+a + scale_fill_manual(values=c("#7F7F7F","#7F7F7F", "#1D9BCB", "#1D9BCB", "#032F66", "#032F66"))
+
+```
+
+```{r New Data START HERE}
+
+thesis_data <- read.csv("Thesis_booneachla.csv")
+
+lthdata <- thesis_data$treatment <- factor(thesis_data$treatment, 
+                                 c("Low", "Medium", "High"))
+
+```
+
+```{r data analysis}
+
+#Feeding Summary Statistics
+
+summary(thesis_data$propfeeding)
+
+summary(thesis_data$treatment)
+
+mean_sd(ordered_data$Oyster.Length)
+
+
+```
+
+
+
+```{r refined boxplot feeding}
+
+f <- ggplot(thesis_data, aes(x=treatment, y=feeding, fill = crab))+
+        geom_boxplot()+
+        theme_classic()
+    
+        
+f + scale_fill_manual(values = c("lightsteelblue", "sienna1")) +
+        labs(title = "Boonea Feeding Activity Across Treatments", x= "Boonea Density Treatment", y= "Boonea Feeding")
+
+```
+
+```{r refined boxplot chla}
+
+g <- ggplot(thesis_data, aes(x = treatment, y= Delta , fill = crab))+
+        geom_boxplot()+
+        theme_bw()
+
+g + scale_fill_manual(values = c("lightsteelblue", "sienna1")) +
+        labs(title = "Oyster Filtration Capacity (Chl-A Concentrations) Across Treatments", x= "Boonea Density Treatment", y= "Change in Chlorophyll-A Concentration")
+
+```
+Nick's attempt sum table
+```{r}
+sum_table_boonea = mydata %>% 
+    group_by(treatment) %>% 
+    summarize(min(boonea),
+              mean(boonea),
+              sd(boonea),
+              median(boonea),
+              max(boonea))
+
+sum_table_boonea_clean = sum_table_boonea %>% 
+    kable(col.names = c("Treatment","Min","Mean","SD","Median","Max"))
+
+sum_table_boonea_clean
+```
+
+
+
+```{r subsetting}
+
+#Density Subsetting
+HighTreat <- subset(mydata,boonea==20)
+MedTreat <- subset(mydata, boonea==10)
+LowTreat <- subset(mydata, boonea==5)
+
+#Subsetting based on Crab Cue Treatment
+CrabHigh <- subset(HighTreat, crab== "YES")
+NoCrabHigh <- subset(HighTreat, crab== "NO")
+
+CrabMed <- subset(MedTreat, crab== "YES")
+NoCrabMed <- subset(MedTreat, crab== "NO")
+
+CrabLow <- subset(LowTreat, crab== "YES")
+NoCrabLow <- subset(LowTreat, crab== "NO")
+
+```
+
+```{r summary statistical analysis}
+
+#Means Across Density Groups
+mean(HighTreat$Delta)
+mean(MedTreat$Delta)
+mean(LowTreat$Delta)
+
+#Means Across Crab and Density Groups
+mean_sd(CrabHigh$Delta, denote_sd = "paren")
+mean_sd(NoCrabHigh$Delta,denote_sd = "paren")
+
+mean_sd(CrabMed$Delta, denote_sd = "paren")
+mean_sd(NoCrabMed$Delta, denote_sd = "paren")
+
+mean_sd(CrabLow$Delta, denote_sd = "paren")
+mean_sd(NoCrabLow$Delta, denote_sd = "paren")
+```
+
+```{r Summary Table Qwraps}
+
+DataSummary1 <-
+        list("Boonea Observed Feeding" =
+       list("min"       = ~ min(ordered_data$feeding, ),
+            "max"       = ~ max(ordered_data$feeding, ),
+            "mean (sd)" = ~ qwraps2::mean_sd(mydata$feeding, denote_sd = "paren")),
+       "Change in Chl-A Concentrations"=
+         list("min"       = ~ min(mydata$Delta),
+            "max"       = ~ max(mydata$Delta),
+            "mean (sd)" = ~ qwraps2::mean_sd(mydata$Delta, denote_sd = "paren")))
+
+Figure10<- summary_table(dplyr::group_by(mydata, treatment), DataSummary1)
+
+Figure10
+
+```
+
+
+
+
+
+
